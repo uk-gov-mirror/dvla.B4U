@@ -10,12 +10,12 @@ class Linter
   def run
     console_output, status = Open3.capture2e(command)
     if status.success?
-      puts "✅ - #{name}".green
+      :passed
     elsif ignore
-      puts "❌ - #{name} (ignored)".magenta
+      :ignored
     else
-      puts "❌ - #{name}".red
       raise LinterError.new(linter: name, console_output:)
+
     end
   end
 end
