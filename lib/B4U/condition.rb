@@ -34,7 +34,7 @@ class Condition
       result, console_output = thread.value
       raise ConfigError, "Condition '#{id}' could not run:\n#{console_output}" if result == :broken
 
-      [id, result == :met]
+      [id, result]
     end
   end
 
