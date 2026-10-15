@@ -88,10 +88,6 @@ RSpec.describe Condition do
       expect(check({ 'unused' => { 'command' => 'b4u_no_such_command' } })).to eq({})
     end
 
-    it 'rejects a run_if that names an unknown condition' do
-      expect { check({}, 'missing') }.to raise_error(ConfigError, /Unknown run_if condition\(s\): missing/)
-    end
-
     it 'rejects a broken condition, including its output' do
       expect { check({ 'broken' => { 'command' => 'b4u_no_such_command' } }, 'broken') }
         .to raise_error(ConfigError, /Condition 'broken' could not run:\n.+/)

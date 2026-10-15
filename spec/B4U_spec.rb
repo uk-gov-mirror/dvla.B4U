@@ -5,16 +5,11 @@ require 'fileutils'
 # TODO add spec tests
 RSpec.describe B4U do
   # Heads up, DO NOT pass rspec as a lint task else it will recursively run this test
-  dummy_config = { 'required-files' => nil, 'linters' => [{ 'name' => 'echo', 'command' => 'echo "Hello world"' }] }.freeze
-  missing_file_config = { 'required-files' => ['missing_file.rb'], 'linters' => [{ 'name' => 'echo', 'command' => 'echo "Hello world"' }] }.freeze
-  failing_linter_config = { 'required-files' => nil, 'linters' => [{ 'name' => 'echo', 'command' => 'exit 1' }] }.freeze
+  dummy_config = { 'linters' => [{ 'name' => 'echo', 'command' => 'echo "Hello world"' }] }.freeze
+  failing_linter_config = { 'linters' => [{ 'name' => 'echo', 'command' => 'exit 1' }] }.freeze
 
   it 'has a version number' do
     expect(B4U::VERSION).not_to be nil
-  end
-
-  it 'throws an error if required files are missing' do
-    expect { B4U.lint(config: missing_file_config) }.to raise_error(StructureError)
   end
 
   it 'can run a successful lint task' do
@@ -39,7 +34,7 @@ RSpec.describe B4U do
     }.freeze
 
     def config(conditions, *linters)
-      { 'required-files' => nil, 'conditions' => conditions, 'linters' => linters }
+      { 'conditions' => conditions, 'linters' => linters }
     end
 
     it 'skips linters whose condition is not met, without running them' do
@@ -66,7 +61,7 @@ RSpec.describe B4U do
       %w[broken missing].each do |id|
         bad = { 'name' => 'bad', 'command' => 'true', 'run_if' => id }
         expect { B4U.lint(config: config(conditions, first, bad)) }
-          .to raise_error(ConfigError).and output.to_stdout
+          .to raise_error(ConfigError)
       end
       expect(File).not_to exist(sentinel)
     end

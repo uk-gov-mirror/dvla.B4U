@@ -9,8 +9,8 @@ class LinterError < StandardError
 end
 
 class ConfigError < StandardError
-  def initialize(msg: 'Config error')
-    super(msg)
+  def initialize(msg = 'Config error')
+    super
   end
 end
 # rubocop:enable Style/OneClassPerFile

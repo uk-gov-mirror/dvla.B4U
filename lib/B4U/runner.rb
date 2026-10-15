@@ -8,7 +8,7 @@ module B4U
 
     def run
       check_config
-      check_conditions
+      setup_conditions
       build_linters
       results = execute
       report(results)
@@ -17,23 +17,29 @@ module B4U
   private
 
     def check_config
-      raise ConfigError, 'Linters have conditional dependencies but no conditions have been declared' if @config['conditions'] && @config['linters'].none? { |l| l['run_if'] }
-      raise ConfigError, 'Linters are missing config' unless @config['linters']
-      raise ConfigError, 'All linters must have a name and command' if @config['linters'].any? { |l| l['name'].nil? || l['command'].nil? }
+      linters = @config['linters'] or raise ConfigError, 'Linters are missing config'
+      raise ConfigError, 'All linters must have a name and command' if linters.any? { |l| l['name'].nil? || l['command'].nil? }
+
+      run_if_ids = linters.filter_map { |l| l['run_if'] }.uniq
+      return if run_if_ids.empty?
+
+      known_ids = @config['conditions']&.keys || raise(ConfigError, 'Linters have conditional dependencies but no conditions have been declared')
+      unknown_ids = run_if_ids - known_ids
+      raise ConfigError, "Unknown run_if condition(s): #{unknown_ids.join(', ')}" if unknown_ids.any?
     end
 
-    def check_conditions
+    def setup_conditions
       @conditions = Condition.from_config(@config['conditions'])
-      @met = Condition.check(@conditions, @config['linters'])
       return if @conditions.empty?
 
       puts 'Running pre-condition checks...'.cyan
-      @conditions.each do |id, condition|
-        case @met[id]
-        when :met   then puts "  #{condition.label}: met".green
-        when :unmet then puts "  #{condition.label}: unmet".yellow
-        when nil    then puts "  #{condition.label}: skipped (no linters depend on this)".yellow
-        else             raise "Unexpected condition state: #{@met[id]}"
+      @met = Condition.check(@conditions, @config['linters'])
+      @met.each do |id, result|
+        condition = @conditions[id]
+        if result
+          puts "  #{condition.label}: met".green
+        else
+          puts "  #{condition.label}: unmet".yellow
         end
       end
       puts
@@ -41,7 +47,7 @@ module B4U
 
     def build_linters
       @linters = @config['linters'].map do |l|
-        skip_reason = @conditions[l['run_if']]&.label if l['run_if'] && @met[l['run_if']] != :met
+        skip_reason = @conditions[l['run_if']]&.label if l['run_if'] && @met[l['run_if']] != true
         Linter.new(name: l['name'], command: l['command'], ignore: l.fetch('ignore', false), skip_reason:)
       end
     end
@@ -64,9 +70,13 @@ module B4U
     def report(results)
       errors = results.filter_map { |_, _, e| e }
       skipped_count = results.count { |_, status, _| status == :skipped }
+      skip_reasons = @linters.each_with_object({}) { |l, h| h[l.name] = l.skip_reason if l.skip_reason }
 
       results.each do |name, status, _|
-        next if status == :skipped
+        if status == :skipped
+          puts "🦘 - #{name} (skipped: #{skip_reasons[name]})".yellow
+          next
+        end
 
         case status
         when :passed  then puts "✅ - #{name}".green

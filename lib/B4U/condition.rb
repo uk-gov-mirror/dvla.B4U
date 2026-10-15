@@ -26,15 +26,13 @@ class Condition
   # Runs each condition the linters use once, in parallel. Returns { id => true if met }
   def self.check(conditions, linters)
     ids = linters.filter_map { |linter| linter['run_if'] }.uniq
-    unknown_ids = ids - conditions.keys
-    raise ConfigError, "Unknown run_if condition(s): #{unknown_ids.join(', ')}" unless unknown_ids.empty?
 
     threads = ids.to_h { |id| [id, Thread.new { conditions[id].evaluate }] }
     threads.to_h do |id, thread|
       result, console_output = thread.value
       raise ConfigError, "Condition '#{id}' could not run:\n#{console_output}" if result == :broken
 
-      [id, result]
+      [id, result == :met]
     end
   end
 
