@@ -7,13 +7,20 @@ module B4U
     end
 
     def run
+      check_config
       check_conditions
       build_linters
       results = execute
       report(results)
     end
 
-    private
+  private
+
+    def check_config
+      raise ConfigError, 'Linters have conditional dependencies but no conditions have been declared' if @config['conditions'] && @config['linters'].none? { |l| l['run_if'] }
+      raise ConfigError, 'Linters are missing config' unless @config['linters']
+      raise ConfigError, 'All linters must have a name and command' if @config['linters'].any? { |l| l['name'].nil? || l['command'].nil? }
+    end
 
     def check_conditions
       @conditions = Condition.from_config(@config['conditions'])
@@ -26,6 +33,7 @@ module B4U
         when :met   then puts "  #{condition.label}: met".green
         when :unmet then puts "  #{condition.label}: unmet".yellow
         when nil    then puts "  #{condition.label}: skipped (no linters depend on this)".yellow
+        else             raise "Unexpected condition state: #{@met[id]}"
         end
       end
       puts
@@ -50,7 +58,7 @@ module B4U
           [linter.name, :failed, e]
         end
       end
-      skipped + threads.map(&:join).map(&:value)
+      skipped + threads.map { |t| t.join.value }
     end
 
     def report(results)
@@ -59,10 +67,12 @@ module B4U
 
       results.each do |name, status, _|
         next if status == :skipped
+
         case status
         when :passed  then puts "✅ - #{name}".green
         when :ignored then puts "⚠️  - #{name} (failed but ignored)".yellow
         when :failed  then puts "❌ - #{name}".red
+        else               raise "Unexpected status: #{status}"
         end
       end
 

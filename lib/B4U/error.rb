@@ -8,13 +8,9 @@ class LinterError < StandardError
   end
 end
 
-class StructureError < StandardError
-  attr_reader :files
-  def initialize(files:, msg: 'Structure error')
-    @files = files
+class ConfigError < StandardError
+  def initialize(msg: 'Config error')
     super(msg)
   end
 end
-
-class ConfigError < StandardError; end
 # rubocop:enable Style/OneClassPerFile

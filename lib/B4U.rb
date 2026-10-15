@@ -12,12 +12,4 @@ module B4U
   def self.lint(config:, quiet: false, action: nil)
     LinterRunner.new(config:, action:, quiet:).run
   end
-
-  # class ProjectChecker
-  #   def self.ensure_project_root!(required_files)
-  #     puts 'Checking project structure...'.cyan
-  #     missing_files = required_files.reject { |file| File.exist?(file) }
-  #     raise StructureError.new(files: missing_files, msg: "Missing project files: #{missing_files.join(', ')}") unless missing_files.empty?
-  #   end
-  # end
 end
